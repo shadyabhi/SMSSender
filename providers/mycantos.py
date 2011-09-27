@@ -3,6 +3,11 @@ import cookielib
 import urllib2
 from getpass import getpass
 
+import logging, sys
+
+logger= logging.getLogger(__file__)
+logging.basicConfig( stream=sys.stdout, level=logging.DEBUG, format='%(filename)s:%(lineno)s %(levelname)s:%(message)s')
+
 class MyCantos:
     def __init__(self):
         self.url = 'http://www.mycantos.com/'
@@ -22,7 +27,10 @@ class MyCantos:
         cj = cookielib.CookieJar()
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         try:
+            logger.debug("Sending request for login...")
+            print "Sending request for login..."
             usock = opener.open(self.url, data)
+            logger.debug("We are logged in to the site")
         except IOError:
             print "Error fetching page www.mycantos.com\nExiting now.."
             return False
@@ -34,8 +42,10 @@ class MyCantos:
 
         #SMS send POST
         try:
+            logger.debug("Sending SMS...")
             send = opener.open(url_send,data_to_send)
+            logger.debug("SMS sent")
             return True
         except IOError:
-            print "Error sending SMS\nExiting now.."
+            logger.debug("Could not connect to remote server")
             return False

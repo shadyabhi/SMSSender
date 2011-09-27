@@ -4,12 +4,17 @@ import gtk
 import pdb
 import ConfigParser
 import threading
-
+import gobject
+import logging
+import sys
 import providers.mycantos as mycantos
 import providers.youmint as youmint
 
 #Initiating thread use
-gtk.gdk.threads_init()
+gobject.threads_init()
+
+logger= logging.getLogger(__file__)
+logging.basicConfig( stream=sys.stdout, level=logging.DEBUG, format='%(filename)s:%(lineno)s %(levelname)s:%(message)s' )
 
 class SMSSender:
     def __init__(self):
@@ -35,6 +40,10 @@ class SMSSender:
         frame_choose_service.add(self.combobox_sms_service)
         self.vbox.pack_start(frame_choose_service, True, True, 0)
 
+        #A horizontal Separator
+        separator = gtk.HSeparator()
+        self.vbox.pack_start(separator, True, True, 10)
+        
         #This gtk.Entry will contain the phone number
         self.frame_phno = gtk.Frame()
         self.frame_phno.set_label("Enter your phone")
@@ -113,29 +122,44 @@ class SMSSender:
         
         #Choosing the right service
         if service_in_use == "mycantos":
-            #self.send_sms_mycantos(phone_no, message_text, username, password)
             threading.Thread(target = self.send_sms_mycantos, args=(phone_no, message_text, username, password)).start()
         elif service_in_use == "youmint":
             threading.Thread(target = self.send_sms_youmint, args=(phone_no, message_text, username, password)).start()
         else:
             print "No matching services found"
-                   
+        
     def send_sms_mycantos(self, phone_no, message_text, username, password):
         mycantos_handle = mycantos.MyCantos()
         mycantos_handle.set_credentials(username,password)
         mycantos_handle.set_message(message_text)
         mycantos_handle.set_number(phone_no)
-        print mycantos_handle.send_sms()
+        if mycantos_handle.send_sms() is True:
+            gobject.timeout_add(1000, self.dialog_notification, "Message sent", gtk.MESSAGE_INFO)
+        else:
+            gobject.timeout_add(1000, self.dialog_notification, "Error sending message", gtk.MESSAGE_ERROR)
+
 
     def send_sms_youmint(self, phone_no, message_text, username, password):
         youmint_handle = youmint.Youmint()
         youmint_handle.set_credentials(username, password)
         youmint_handle.set_message(message_text)
         youmint_handle.set_number(phone_no)
-        print youmint_handle.send_sms()
+        if youmint_handle.send_sms() is True:
+            gobject.timeout_add(1000, self.dialog_notification, "Message sent", gtk.MESSAGE_INFO)
+        else:
+            gobject.timeout_add(1000, self.dialog_notification, "Error sending message", gtk.MESSAGE_ERROR)
+
+    def dialog_notification(self, message, dialog_type):
+        logger.debug("Showing the dialog for more info")
+        dlg = gtk.MessageDialog(self.window, gtk.DIALOG_DESTROY_WITH_PARENT, dialog_type, gtk.BUTTONS_CLOSE, message)
+        dlg.run()
+        dlg.destroy()
+        return False
 
     def main(self):
+        gtk.threads_enter()
         gtk.main()
+        gtk.threads_leave()
         
 if __name__ == "__main__":
     my_app = SMSSender()

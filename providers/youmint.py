@@ -1,8 +1,12 @@
 
 import cookielib
 import urllib2
+import logging, sys
 from getpass import getpass
 from urllib import urlencode
+
+logger= logging.getLogger(__file__)
+logging.basicConfig( stream=sys.stdout, level=logging.DEBUG, format='%(filename)s:%(lineno)s %(levelname)s:%(message)s')
 
 class Youmint:
     def __init__(self):
@@ -25,7 +29,9 @@ class Youmint:
         cj = cookielib.CookieJar()
         opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
         try:
+            logger.debug("Attempting to login to site...")
             usock = opener.open(self.url, "")
+            logger.debug("Logged into the site.")
         except IOError:
             return False
 
@@ -36,7 +42,9 @@ class Youmint:
         
         #SMS send POST
         try:
+            logger.debug("Sending SMS...")
             send = opener.open(url_send,"")
+            logger.debug("SMS Sent")
             return True
         except IOError:
             print "Error sending SMS\nExiting now.."
