@@ -2,9 +2,11 @@
 
 import gtk
 import pdb
-import providers.mycantos as mycantos
 import ConfigParser
 import threading
+
+import providers.mycantos as mycantos
+import providers.youmint as youmint
 
 #Initiating thread use
 gtk.gdk.threads_init()
@@ -29,6 +31,7 @@ class SMSSender:
         frame_choose_service.set_label("Choose the provider")
         self.combobox_sms_service = gtk.combo_box_new_text()
         self.combobox_sms_service.append_text("mycantos")
+        self.combobox_sms_service.append_text("youmint")
         frame_choose_service.add(self.combobox_sms_service)
         self.vbox.pack_start(frame_choose_service, True, True, 0)
 
@@ -88,8 +91,14 @@ class SMSSender:
         #Getting the credentials from config file
         c = ConfigParser.ConfigParser()
         c.read(".creds")
-        username = c.get(service_in_use, "username")
-        password = c.get(service_in_use, "password")
+        try:
+            username = c.get(service_in_use, "username")
+            password = c.get(service_in_use, "password")
+        except ConfigParser.NoSectionError:
+            warning = gtk.MessageDialog(self.window, gtk.DIALOG_DESTROY_WITH_PARENT, gtk.MESSAGE_ERROR, gtk.BUTTONS_CLOSE, "Run the set_creds.py to add the provider's username & password")
+            warning.run()
+            warning.destroy()
+            return
 
         #Get the start & end gtk.IterText
         start, end = message_buffer.get_bounds()
@@ -106,6 +115,8 @@ class SMSSender:
         if service_in_use == "mycantos":
             #self.send_sms_mycantos(phone_no, message_text, username, password)
             threading.Thread(target = self.send_sms_mycantos, args=(phone_no, message_text, username, password)).start()
+        elif service_in_use == "youmint":
+            threading.Thread(target = self.send_sms_youmint, args=(phone_no, message_text, username, password)).start()
         else:
             print "No matching services found"
                    
@@ -115,6 +126,13 @@ class SMSSender:
         mycantos_handle.set_message(message_text)
         mycantos_handle.set_number(phone_no)
         print mycantos_handle.send_sms()
+
+    def send_sms_youmint(self, phone_no, message_text, username, password):
+        youmint_handle = youmint.Youmint()
+        youmint_handle.set_credentials(username, password)
+        youmint_handle.set_message(message_text)
+        youmint_handle.set_number(phone_no)
+        print youmint_handle.send_sms()
 
     def main(self):
         gtk.main()
